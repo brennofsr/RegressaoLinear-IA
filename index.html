@@ -22,6 +22,26 @@
     <script src="index.js"></script>
 
     <script>
+        async function main() {
+            let pyodide = await loadPyodide();
+            return pyodide;
+        }
+        let pyodideReadyPromise = main();
+
+        // Pyodide - carregar arquivos e executar chamada
+        async function evaluatePython() {
+            let pyodide = await pyodideReadyPromise;
+            try {
+                let python_code = (await (await fetch('bayesian_alarmbayes.py')).text());
+                pyodide.runPython(python_code);
+                let output = pyodide.runPython(code.value);
+                addToOutput(output);
+            } catch (err) {
+                addToOutput(err);
+            }
+        } 
+    </script>
+    <script>
         window.addEventListener('load', () => {
             registerSW();
         });
