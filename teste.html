@@ -1,39 +1,187 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.2/full/pyodide.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.2/full/pyodide.js"></script>
+    <title>Diabetes Prediction</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        .input-container {
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 20px;
+        font-family: 'Helvetica';
+        }
+        
+        .title-container {
+        border: 1px solid #313131;
+        background-color: #313131;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 20px;
+        font-family: 'Helvetica';
+        color:#ccc;
+        }
+
+        .input-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        }
+
+        .input-row label {
+        flex: 1;
+        margin-right: 10px;
+        font-weight: bold;
+        }
+
+        .input-row input {
+        flex: 2;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        }
+    </style>
 </head>
 <body>
-  <h1>Previsão de Progressão da Diabetes</h1>
-  <div id="input-form">
-    <label for="age">Idade do paciente:</label>
-    <input type="number" id="age" step="any"><br>
-    <label for="sex">Sexo do paciente (1 - feminino, 2 - masculino):</label>
-    <input type="number" id="sex" step="any"><br>
-    <label for="bmi">Índice de massa corporal (BMI):</label>
-    <input type="number" id="bmi" step="any"><br>
-    <label for="bp">Pressão arterial média:</label>
-    <input type="number" id="bp" step="any"><br>
-    <button onclick="predict()">Fazer previsão</button>
-  </div>
-  <div id="output"></div>
+    <h1 class="title-container">Previsão de Diabetes Utilizando Regressão Linear</h1>
+    
+    <div class="input-container">
+        <div class="input-row">
+            <label for="s1">Idade do paciente:</label>
+            <input type="number" id="s1" class="input-field">
+        </div>
+        <div class="input-row">
+            <label for="s2">Sexo do paciente (1 - feminino, 2 - masculino):</label>
+            <input type="number" id="s2" class="input-field">
+        </div>
+        <div class="input-row">
+            <label for="s3">Índice de massa corporal (BMI):</label>
+            <input type="number" id="s3" class="input-field">
+        </div>
+        <div class="input-row">
+            <label for="s4">Pressão arterial média:</label>
+            <input type="number" id="s4" class="input-field">
+        </div>
+    </div>
+      
+    <button onclick="makePrediction()">Fazer Previsão</button>
+      
+    
+    <p id="predictionResult"></p>
+    <p id="mrse"></p>
+    <p id="r2"></p>
 
-  <script>
-    pyodide.load().then(() => {
-      pyodide.globals.get_prediction = pyodide.globals.predict;
+    <script>
 
-      function predict() {
-        const age = parseFloat(document.getElementById('age').value);
-        const sex = parseFloat(document.getElementById('sex').value);
-        const bmi = parseFloat(document.getElementById('bmi').value);
-        const bp = parseFloat(document.getElementById('bp').value);
+        function addToOutput(s, i, j) {
+            var resultado = document.getElementById("predictionResult");
+            var mrse = document.getElementById("mrse");
+            var r2 = document.getElementById("r2");
+            
+            resultado.innerHTML = s;
+            mrse.innerHTML = i;
+            r2.innerHTML = j;
+        }
 
-        const input_data = [[age, sex, bmi, bp]];
-        const prediction = pyodide.globals.get_prediction(input_data);
+        async function main() {
+            let pyodide = await loadPyodide();
+            await pyodide.loadPackage("pandas");
+            await pyodide.loadPackage("scikit-learn");
+            await pyodide.loadPackage("numpy");
+            return pyodide;
+        }
+        let pyodideReadyPromise = main();  
+        
+        async function makePrediction() {
+            let pyodide = await pyodideReadyPromise;
+            try {
+                let s1 = parseFloat(document.getElementById('s1').value);
+                let s2 = parseFloat(document.getElementById('s2').value);
+                let s3 = parseFloat(document.getElementById('s3').value);
+                let s4 = parseFloat(document.getElementById('s4').value);
 
-        document.getElementById('output').textContent = `Previsão da progressão da diabetes: ${prediction}`;
-      }
-    });
-  </script>
+                // const response = await fetch('diabetes.txt');
+                // const fileContent = await response.text();
+
+                const pythonCode = `
+import pandas as pd
+import csv
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+from pyodide.http import open_url
+import json
+
+url = 'diabetes.txt'
+data = pd.read_csv(open_url(url), sep='\t')
+
+# Identificar as variáveis relevantes para a progressão da diabetes
+X = data[['AGE', 'SEX', 'BMI', 'BP']]  # Variáveis independentes
+y = data['Y']  # Variável dependente
+
+# Dividir os dados em treino e teste
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+# Criar o modelo de regressão linear
+model = LinearRegression()
+# Treinar o modelo
+model.fit(X_train, y_train)
+
+# Fazer previsões
+y_pred = model.predict(X_test)
+
+# Calcular métricas
+rmse = mean_squared_error(y_test, y_pred, squared=False)
+r2 = r2_score(y_test, y_pred)
+
+input_data = [[${s1}, ${s2}, ${s3}, ${s4}]]
+input_data = np.array(input_data).reshape(1, -1)
+predicted_progression = model.predict(input_data)
+
+# Armazenar os valores em um objeto
+result = {
+    'predicted_progression': predicted_progression[0],
+    'rmse': rmse,
+    'r2': r2
+}
+
+# Retornar o resultado como uma string JSON
+json.dumps(result)
+`;
+            const output = await pyodide.runPythonAsync(pythonCode);
+            const result = JSON.parse(output);
+            const predictedProgression = result.predicted_progression;
+            const rmse = result.rmse;
+            const r2 = result.r2;
+            addToOutput(predictedProgression, rmse, r2);
+            } catch(err)  {
+                addToOutput(err);
+            }
+        }
+    </script>
+
+    <script>
+        window.addEventListener('load', () => {
+            registerSW();
+        });
+
+        // Registro do Service Worker
+        async function registerSW() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    await navigator
+                            .serviceWorker
+                            .register('serviceworker.js');
+                }
+                catch (e) {
+                    console.log('SW registration failed');
+                }
+            }
+        }
+    </script>
 </body>
 </html>

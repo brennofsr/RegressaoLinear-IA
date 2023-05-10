@@ -51,8 +51,8 @@
             await pyodide.loadPackage("numpy");
             return pyodide;
         }
-        let pyodideReadyPromise = main();
-
+        let pyodideReadyPromise = main();  
+        
         async function makePrediction() {
             let pyodide = await pyodideReadyPromise;
             try {
@@ -60,50 +60,29 @@
                 let s2 = parseFloat(document.getElementById('s2').value);
                 let s3 = parseFloat(document.getElementById('s3').value);
                 let s4 = parseFloat(document.getElementById('s4').value);
-                
-                let python_code = `
-import pandas as pd
-import pyodide
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
 
-with open('diabetes.txt', 'r') as file:
-    dt = file.read()
+                const response = await fetch('diabetes.txt');
+                const fileContent = await response.text();
 
-data = pd.read_csv(pd.compat.StringIO(dt), sep='\t')
+                pyodide.globals.set('file_content', fileContent);
 
-# Separar as features (X) e o target (y)
-X = data[['Age', 'Sex', 'BMI', 'BP']].values
-y = data['Diabetes'].values
+                let response2 = await fetch('regressao.py');
+                let python_code = await response2.text();
 
-# Dividir os dados em treino e teste
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+                const predictionFunction = `
+${python_code}
 
-# Criar o modelo de regressão linear
-model = LinearRegression()
-# Treinar o modelo
-model.fit(X_train, y_train)
-
-# Fazer previsões
-y_pred = model.predict([[${s1}, ${s2}, ${s3}, ${s4}]])
-
-# Calcular métricas
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-# Retornar o resultado
-(y_pred[0], mse, r2)
+output = make_prediction(${s1}, ${s2}, ${s3}, ${s4})
+sys.stdout = StringIO()
+print(output)
 `;
 
-                let output = pyodide.runPython(python_code);
-                addToOutput(output[0], output[1], output[2]);
+                let output = await pyodide.runPythonAsync(predictionFunction);
+                addToOutput(output.stdout.trim());
             } catch (err) {
                 addToOutput(err);
             }
         }
-
     </script>
 
     <script>
