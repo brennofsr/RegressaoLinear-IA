@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.1/full/pyodide.js"></script>
+    <title>Diabetes Prediction</title>
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <h1>Diabetes Prediction</h1>
+    
+    <label for="s1">Idade do paciente:</label>
+    <input type="number" id="s1">
+    <br>
+    
+    <label for="s2">Sexo do paciente (1 - feminino, 2 - masculino):</label>
+    <input type="number" id="s2">
+    <br>
+    
+    <label for="s3">Índice de massa corporal (BMI):</label>
+    <input type="number" id="s3">
+    <br>
+    
+    <label for="s4">Pressão arterial média:</label>
+    <input type="number" id="s4">
+    <br>
+    
+    <button onclick="makePrediction()">Fazer Previsão</button>
+    
+    <p id="predictionResult"></p>
+    <p id="mrse"></p>
+    <p id="r2"></p>
+
+    <script>
+
+        function addToOutput(s, i, j) {
+            var resultado = document.getElementById("predictionResult");
+            var mrse = document.getElementById("mrse");
+            var r2 = document.getElementById("r2");
+            
+            resultado.innerHTML = s;
+            mrse.innerHTML = i;
+            r2.innerHTML = j;
+        }
+
+        async function main() {
+            let pyodide = await loadPyodide();
+            await pyodide.loadPackage("pandas");
+            await pyodide.loadPackage("scikit-learn");
+            await pyodide.loadPackage("numpy");
+            return pyodide;
+        }
+        let pyodideReadyPromise = main();
+
+        async function makePrediction() {
+            let pyodide = await pyodideReadyPromise;
+            try {
+                let s1 = parseFloat(document.getElementById('s1').value);
+                let s2 = parseFloat(document.getElementById('s2').value);
+                let s3 = parseFloat(document.getElementById('s3').value);
+                let s4 = parseFloat(document.getElementById('s4').value);
+                
+                let python_code = `
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Carregar os dados
+# url = 'https://www4.stat.ncsu.edu/~boos/var.select/diabetes.tab.txt'
+# data = pd.read_csv(url, sep='\\t')
+
+input_file = "diabetes.tab.txt"
+# output_file = "diabetes.csv"
+
+data = pd.read_csv(input_file, sep='\\t')
+
+# Salvar os dados como um arquivo CSV
+# data.to_csv(output_file, index=False)
+
+
+# Separar as features (X) e o target (y)
+X = data[['Age', 'Sex', 'BMI', 'BP']].values
+y = data['Diabetes'].values
+
+# Dividir os dados em treino e teste
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+# Criar o modelo de regressão linear
+model = LinearRegression()
+# Treinar o modelo
+model.fit(X_train, y_train)
+
+# Fazer previsões
+y_pred = model.predict([[${s1}, ${s2}, ${s3}, ${s4}]])
+
+# Calcular métricas
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+# Retornar o resultado
+(y_pred[0], mse, r2)
+`;
+
+                let output = pyodide.runPython(python_code);
+                addToOutput(output[0], output[1], output[2]);
+            } catch (err) {
+                addToOutput(err);
+            }
+        }
+
+    </script>
+
+    <script>
+        window.addEventListener('load', () => {
+            registerSW();
+        });
+
+        // Registro do Service Worker
+        async function registerSW() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    await navigator
+                            .serviceWorker
+                            .register('serviceworker.js');
+                }
+                catch (e) {
+                    console.log('SW registration failed');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
