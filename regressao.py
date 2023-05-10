@@ -1,45 +1,45 @@
-import numpy as np
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-from js import document
-from sklearn.decomposition import PCA
-    
-my_str = "teste"
-    
-rng = np.random.RandomState(0)
-n_samples = 500
-cov = [[3, 3], [3, 4]]
-X = rng.multivariate_normal(mean=[0, 0], cov=cov, size=n_samples)
-pca = PCA(n_components=2).fit(X)
-    
-f = plt.figure()
-plt.scatter(X[:, 0], X[:, 1], alpha=0.3, label="samples")
-for i, (comp, var) in enumerate(zip(pca.components_, pca.explained_variance_)):
-    comp = comp * var  # scale component by its variance explanation power
-    plt.plot(
-        [0, comp[0]],
-        [0, comp[1]],
-        label=f"Component {i}",
-        linewidth=5,
-        color=f"C{i + 2}",
-    )
-plt.legend()
-plt.show()
+def makePrediction(s1, s2, s3, s4):
+    import pandas as pd
+    import numpy as np
+    from sklearn.preprocessing import PolynomialFeatures
+    from sklearn.linear_model import LinearRegression
+    from sklearn.metrics import mean_squared_error, r2_score
 
+    # Carregar a base de dados do diabetes a partir do link
+    url = 'https://www4.stat.ncsu.edu/~boos/var.select/diabetes.tab.txt'
+    data = pd.read_csv(url, sep='\\t')
 
-# ordinary function to create a div
-def create_root_element1(self):
-    div = document.createElement('div')
-    document.body.appendChild(div)
-    return div
+    # Identificar as variáveis relevantes para a progressão da diabetes
+    X = data[['BMI', 'BP', 'S4', 'S5']]  # Variáveis independentes
+    y = data['Y']  # Variável dependente
 
-#ordinary function to find an existing div
-#you'll need to put a div with appropriate id somewhere in the document
-def create_root_element2(self):
-    return document.getElementById('figure1')
+    # Dividir os dados em conjunto de treinamento e teste
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-#override create_root_element method of canvas by one of the functions above
-f.canvas.create_root_element = create_root_element1.__get__(
-    create_root_element1, f.canvas.__class__)
+    # Criar um modelo de regressão linear
+    model = LinearRegression()
 
-f.canvas.show()
+    # Pré-processamento dos dados de entrada
+    regr_quad = PolynomialFeatures(degree=2, include_bias=False)
+    X_train_poly = regr_quad.fit_transform(X_train)
+    X_test_poly = regr_quad.transform(X_test)
+
+    # Treinar o modelo usando o conjunto de treinamento
+    model.fit(X_train_poly, y_train)
+
+    # Fazer previsões usando o conjunto de teste
+    y_pred = model.predict(X_test_poly)
+
+    # Avaliar o desempenho do modelo
+
+    # RMSE (Raiz quadrada do erro médio quadrático)
+    rmse = mean_squared_error(y_test, y_pred, squared=False)
+    # R^2 (Coeficiente de determinação)
+    r2 = r2_score(y_test, y_pred)
+
+    # Fazer a previsão da progressão da diabetes usando o modelo treinado
+    input_data = [[s1, s2, s3, s4]]
+    input_data_poly = regr_quad.transform(input_data)
+    predicted_progression = model.predict(input_data_poly)[0]
+
+    return rmse, r2, predicted_progression

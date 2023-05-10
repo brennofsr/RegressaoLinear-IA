@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.1/full/pyodide.js"></script>
+    <title>Diabetes Prediction</title>
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <h1>Diabetes Prediction</h1>
+    
+    <label for="s1">Idade do paciente:</label>
+    <input type="number" id="s1">
+    <br>
+    
+    <label for="s2">Sexo do paciente (1 - feminino, 2 - masculino):</label>
+    <input type="number" id="s2">
+    <br>
+    
+    <label for="s3">Índice de massa corporal (BMI):</label>
+    <input type="number" id="s3">
+    <br>
+    
+    <label for="s4">Pressão arterial média:</label>
+    <input type="number" id="s4">
+    <br>
+    
+    <button onclick="makePrediction()">Fazer Previsão</button>
+    
+    <p id="predictionResult"></p>
+    <p id="mrse"></p>
+    <p id="r2"></p>
+
+    <script>
+
+        function addToOutput(s,i,j) {
+            var resultado = document.getElementById("predictionResult");
+            var mrse = document.getElementById("mrse");
+            var r2 = document.getElementById("r2");
+            
+            resultado.innerHTML = s;
+            mrse.innerHTML = i;
+            r2.innerHTML = j;
+        }
+
+        async function main() {
+            let pyodide = await loadPyodide();
+            await pyodide.loadPackage("pandas");
+            await pyodide.loadPackage("scikit-learn");
+            await pyodide.loadPackage("numpy");
+            return pyodide;
+        }
+        let pyodideReadyPromise = main();
+
+        async function makePrediction() {
+            let pyodide = await pyodideReadyPromise;
+            try {
+                let python_code = (await (await fetch('regressao.py')).text());
+                let s1 = parseFloat(document.getElementById('s1').value);
+                let s2 = parseFloat(document.getElementById('s2').value);
+                let s3 = parseFloat(document.getElementById('s3').value);
+                let s4 = parseFloat(document.getElementById('s4').value);
+                pyodide.runPython(python_code);
+                let output = pyodide.runPython(`makePrediction(${s1}, ${s2}, ${s3}, ${s4})`);
+                addToOutput(output);
+            } catch (err) {
+                addToOutput(err);
+            }
+        }
+
+    </script>
+
+    <script>
+        window.addEventListener('load', () => {
+            registerSW();
+        });
+
+        // Registro do Service Worker
+        async function registerSW() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    await navigator
+                            .serviceWorker
+                            .register('serviceworker.js');
+                }
+                catch (e) {
+                    console.log('SW registration failed');
+                }
+            }
+        }
+    </script>
+</body>
