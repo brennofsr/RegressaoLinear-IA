@@ -1,12 +1,12 @@
 {
-	"name":"Regressão Linear",
-	"short_name":"LReg",
+	"name":"Diabetes Prediction",
+	"short_name":"DPred",
 	"start_url":"index.html",
 	"display":"standalone",
 	"background_color":"#5900b3",
 	"theme_color":"black",
 	"scope": ".",
-	"description":"Exemplo de uso da Regressão Linear",
+	"description":"Previsão de Diabetes Utilizando Regressão Linear",
     "icons":[
         {
             "src":"regressao.png",					
